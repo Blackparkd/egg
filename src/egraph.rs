@@ -1212,6 +1212,3 @@ mod tests {
         println!("{}", json_rep);
     }
 }
-
-println!("Changes here!");
-println!("New egg");
