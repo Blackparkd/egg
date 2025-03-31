@@ -84,6 +84,7 @@ pub struct EGraph<L: Language, N: Analysis<L>> {
     /// Only manually set it if you know what you're doing.
     #[cfg_attr(feature = "serde-1", serde(skip))]
     pub clean: bool,
+    pub merge_count: usize,
 }
 
 #[cfg(feature = "serde-1")]
@@ -110,6 +111,7 @@ impl<L: Language, N: Analysis<L>> Debug for EGraph<L, N> {
 impl<L: Language, N: Analysis<L>> EGraph<L, N> {
     /// Creates a new, empty `EGraph` with the given `Analysis`
     pub fn new(analysis: N) -> Self {
+        println!("\n\n===== NEW EGRAPH CREATED =====\n");
         Self {
             analysis,
             classes: Default::default(),
@@ -120,6 +122,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
             memo: Default::default(),
             analysis_pending: Default::default(),
             classes_by_op: Default::default(),
+            merge_count: 0,
         }
     }
 
@@ -509,6 +512,11 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
             use_anchors: true,
         }
     }
+
+    /// Returns the total number of merge operations performed in this egraph
+    pub fn get_merge_count(&self) -> usize {
+        self.merge_count
+    }
 }
 
 /// Given an `Id` using the `egraph[id]` syntax, retrieve the e-class.
@@ -867,6 +875,7 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
             }
             return false;
         }
+        self.merge_count += 1;
         // make sure class2 has fewer parents
         let class1_parents = self.classes[&id1].parents.len();
         let class2_parents = self.classes[&id2].parents.len();
@@ -1131,7 +1140,8 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
                 "REBUILT! in {}.{:03}s\n",
                 "  Old: hc size {}, eclasses: {}\n",
                 "  New: hc size {}, eclasses: {}\n",
-                "  unions: {}, trimmed nodes: {}"
+                "  unions: {}, trimmed nodes: {}\n",
+                "  Total merges so far: {}",
             ),
             elapsed.as_secs(),
             elapsed.subsec_millis(),
@@ -1141,6 +1151,26 @@ impl<L: Language, N: Analysis<L>> EGraph<L, N> {
             self.number_of_classes(),
             n_unions,
             trimmed_nodes,
+            self.merge_count,
+        );
+
+        println!(
+            concat!(
+                "REBUILT! in {}.{:03}s\n",
+                "  Old: hc size {}, eclasses: {}\n",
+                "  New: hc size {}, eclasses: {}\n",
+                "  unions: {}, trimmed nodes: {}\n",
+                "  Total merges so far: {}",
+            ),
+            elapsed.as_secs(),
+            elapsed.subsec_millis(),
+            old_hc_size,
+            old_n_eclasses,
+            self.memo.len(),
+            self.number_of_classes(),
+            n_unions,
+            trimmed_nodes,
+            self.merge_count,
         );
 
         debug_assert!(self.check_memo());
